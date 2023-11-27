@@ -6,7 +6,7 @@ from visualize import visualize
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
 
-def train(epochs):
+def train(epochs, data):
     model = monai.networks.nets.SegResNet(
 		blocks_down=[1, 2, 2, 4],
         blocks_up=[1, 1, 1],
@@ -55,7 +55,7 @@ def train(epochs):
 
 
     
-    datalist = monai.data.load_decathlon_datalist('data/Task01_BrainTumour/dataset.json', data_list_key='training')
+    datalist = monai.data.load_decathlon_datalist(data or 'data/Task01_BrainTumour/dataset.json', data_list_key='training')
 
     dataset = monai.data.Dataset(
         data=datalist,
@@ -108,7 +108,7 @@ def train(epochs):
 
     torch.save(model, 'models/model.pt')
 
-def infer():
+def infer(data):
     model = monai.networks.nets.SegResNet(
 		blocks_down=[1, 2, 2, 4],
         blocks_up=[1, 1, 1],
@@ -127,7 +127,7 @@ def infer():
 
 
     
-    datalist = monai.data.load_decathlon_datalist('data/Task01_BrainTumour/dataset.json', data_list_key='training')
+    datalist = monai.data.load_decathlon_datalist(data or 'data/Task01_BrainTumour/dataset.json', data_list_key='test')
 
     dataset = monai.data.Dataset(
         data=datalist,
@@ -170,19 +170,20 @@ def infer():
 def main():
 
     parser = argparse.ArgumentParser(
-            prog="Monai BRATS MRI Segfmentation",
+            prog="Monai BRATS MRI Segmentation",
             description="Trains a thing",
     )
 
     parser.add_argument('mode', choices=['train', 'infer', 'visualize'])
     parser.add_argument('-e', '--epochs', type=int, default=100)
+    parser.add_argument('-d', '--data', help='Path to the dataset.json file in Task01_BrainTumour')
 
     args = parser.parse_args()
 
     if args.mode == 'train':
-        train(args.epochs)
+        train(args.epochs, args.data)
     elif args.mode == 'infer':
-        infer()
+        infer(args.data)
     elif args.mode == 'visualize':
         visualize()
 

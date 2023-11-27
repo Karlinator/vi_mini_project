@@ -14,10 +14,10 @@ def visualize(image):
     axs[0, 2].imshow(test_load[:,:,80])
     axs[0, 2].set_title('Prediction')
     
-    image_lab = 'data/Task01_BrainTumour/labelsTr/'+image+'.nii.gz'
-    label = nib.load(image_lab).get_fdata()
-    axs[1, 2].imshow(label[:,:,80])
-    axs[1, 2].set_title('Label')
+    # image_lab = 'data/Task01_BrainTumour/labelsTr/'+image+'.nii.gz'
+    # label = nib.load(image_lab).get_fdata()
+    # axs[1, 2].imshow(label[:,:,80])
+    # axs[1, 2].set_title('Label')
     
     image_str = 'data/Task01_BrainTumour/imagesTr/'+image+'.nii.gz'
     test_load = nib.load(image_str).get_fdata()
@@ -58,7 +58,7 @@ def visualize_data(image):
     
     
 if __name__ == "__main__":
-    # image = random.choice(os.listdir('output/'))
-    image = 'BRATS_176'
+    image = random.choice(os.listdir('output/'))
+    # image = 'BRATS_176'
     # visualize_data(image)
     visualize(image)
