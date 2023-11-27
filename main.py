@@ -2,6 +2,8 @@ import monai
 import torch
 import argparse
 
+from visualize import visualize
+
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu') 
 
 def train(epochs):
@@ -53,7 +55,7 @@ def train(epochs):
 
 
     
-    datalist = monai.data.load_decathlon_datalist('/cluster/projects/vc/data/mic/open/MSD/Task01_BrainTumour/dataset.json', data_list_key='training')
+    datalist = monai.data.load_decathlon_datalist('data/Task01_BrainTumour/dataset.json', data_list_key='training')
 
     dataset = monai.data.Dataset(
         data=datalist,
@@ -114,10 +116,10 @@ def infer():
         in_channels=4,
         out_channels=3,
         dropout_prob=0.2
-    ).to(device=device) # We're only segmenting "tumour/not tumour" (I think).
+    ).to(device=device)
 
     preprocessing_transforms = [
-        monai.transforms.LoadImaged(keys=["image", "label"], image_only=False, ensure_channel_first=True),
+        monai.transforms.LoadImaged(keys="image", image_only=False, ensure_channel_first=True),
         monai.transforms.NormalizeIntensityd(keys="image", nonzero=True, channel_wise=True),
     ]
 
@@ -125,7 +127,7 @@ def infer():
 
 
     
-    datalist = monai.data.load_decathlon_datalist('/cluster/projects/vc/data/mic/open/MSD/Task01_BrainTumour/dataset.json', data_list_key='test')
+    datalist = monai.data.load_decathlon_datalist('data/Task01_BrainTumour/dataset.json', data_list_key='training')
 
     dataset = monai.data.Dataset(
         data=datalist,
@@ -138,21 +140,15 @@ def infer():
 		monai.transforms.Activationsd(keys="pred", sigmoid=True),
         monai.transforms.Invertd(keys="pred", transform=preprocessing, orig_keys="image", meta_keys="pred_meta_dict", nearest_interp=False, to_tensor=True),
         monai.transforms.AsDiscreted(keys="pred", threshold=0.5),
-        monai.transforms.Lambdad(keys="pred", func=lambda x: torch.where(x[[2]] > 0, 4, torch.where(x[[0]] > 0, 1, torch.where(x[[1]] > 0, 2, 0)))),
+        monai.transforms.Lambdad(keys="pred", func=lambda x: torch.where(x[[0]] > 0, 4, torch.where(x[[2]] > 0, 1, torch.where(x[[1]] > 0, 2, 0)))),
         monai.transforms.SaveImaged(keys="pred", meta_keys="pred_meta_dict", output_dir="output/", output_postfix="seg", output_dtype="uint8", resample=False, squeeze_end_dims=True),
     ])
 
     inferer = monai.inferers.SlidingWindowInferer(roi_size=[240, 240, 160], sw_batch_size=1, overlap=0.5)
 
-    key_metric = {
-        "train_mean_dice": monai.handlers.MeanDice(
-            include_background=True,
-            output_transform=monai.handlers.from_engine(["pred", "label"]))
-    }
-
     handlers = [
         monai.handlers.CheckpointLoader(
-            load_path='models/model.pt',
+            load_path='checkpoints/checkpoint_epoch=100.pt',
             load_dict={'network': model}
         ),
     ]
@@ -161,14 +157,15 @@ def infer():
         device=device,
         val_data_loader=dataloader,
         network=model,
+        inferer=inferer,
         postprocessing=postprocessing,
         val_handlers=handlers,
         amp=True,
     )
+    
+    handlers[0](evaluator)
 
     evaluator.run()
-
-
 
 def main():
 
@@ -177,7 +174,7 @@ def main():
             description="Trains a thing",
     )
 
-    parser.add_argument('mode', choices=['train', 'infer'])
+    parser.add_argument('mode', choices=['train', 'infer', 'visualize'])
     parser.add_argument('-e', '--epochs', type=int, default=100)
 
     args = parser.parse_args()
@@ -186,6 +183,8 @@ def main():
         train(args.epochs)
     elif args.mode == 'infer':
         infer()
+    elif args.mode == 'visualize':
+        visualize()
 
 if __name__ == '__main__':
     main()

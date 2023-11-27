@@ -1,2 +1,7 @@
 venv/
-
+models/
+output/
+data/
+__pycache__/
+checkpoints/
+checkpoints*/
